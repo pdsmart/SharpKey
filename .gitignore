@@ -28,6 +28,7 @@
 *.qdf
 *.srf
 *.swo
+*efuse*
 build/
 old/
 */old/
