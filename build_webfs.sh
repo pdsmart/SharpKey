@@ -4,12 +4,12 @@ SRCDIR=`pwd`/webserver
 WEBFSDIR=`pwd`/webfs
 echo "Building into:$WEBFSDIR from $SRCDIR..."
 
-mkdir -p webfs/css
-mkdir -p webfs/js
-mkdir -p webfs/font-awesome
-mkdir -p webfs/font-awesome/css
-mkdir -p webfs/font-awesome/fonts
-mkdir -p webfs/images
+mkdir -p ${WEBFSDIR}/css
+mkdir -p ${WEBFSDIR}/js
+mkdir -p ${WEBFSDIR}/font-awesome
+mkdir -p ${WEBFSDIR}/font-awesome/css
+mkdir -p ${WEBFSDIR}/font-awesome/fonts
+mkdir -p ${WEBFSDIR}/images
 
 (cd ${SRCDIR}/;
 cp      favicon.ico                  ${WEBFSDIR}/
