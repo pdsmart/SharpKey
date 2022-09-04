@@ -1,1 +1,309 @@
-../../sharpkey/main/Kconfig.projbuild
+menu "SharpKey Configuration"
+
+    choice BUILD_TARGET
+        prompt "Build target"
+        default SHARPKEY
+        help
+            Choose the target of the next build, SHARPKEY for the multi-host SharpKey Interface, MZ25KEY_MZ2500 for the mz25key Interface which will be used 
+            with an MZ-2500 or MZ25KEY_MZ2800 for the mz25key Interface which will be used with an MZ-2800.
+
+        config SHARPKEY
+            bool "SharpKey"
+            help
+                Target build for the SharpKey multi-host Interface.
+
+        config MZ25KEY_MZ2500
+            bool "mz25key - MZ2500"
+            help
+                Target build for the mz25key Interface for use on an MZ-2500
+
+        config MZ25KEY_MZ2800
+            bool "mz25key - MZ2800"
+            help
+                Target build for the mz25key Interface for use on an MZ-2800
+    endchoice
+
+    choice FEATURE_SECURITY
+        prompt "Runtime Feature Security"
+        default DISABLE_FEATURE_SECURITY
+        help
+            Choose wether to enable features in the firmware based on fuse settings or to disable the feature.
+
+        config DISABLE_FEATURE_SECURITY
+            bool "Disable feature security"
+            help
+                Disable the feature security, enabling all inbuilt modules of the SharpKey firmware.
+
+        config ENABLE_FEATURE_SECURITY
+            bool "Enable feature security"
+            help
+                Enable feature security, modules will only be available if the corresponding eFuse is set.
+    endchoice
+
+    menu "PS2 Keyboard"
+
+        config PS2_HW_DATAPIN
+            int "GPIO pin number used for the PS/2 Keyboard DATA line"
+            range 0 46
+            default 14 
+            help
+                GPIO number (IOxx) used to connect with the PS/2 Keyboard DATA line.
+                Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+                GPIOs 35-39 are input-only so cannot be used as outputs.
+    
+        config PS2_HW_CLKPIN
+            int "GPIO pin number used for the PS/2 Keyboard CLK line"
+            range 0 46
+            default 13 
+            help
+                GPIO number (IOxx) used to connect with the PS/2 Keyboard CLK line.
+                This pin must be interrupt capable.
+                Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+                GPIOs 35-39 are input-only so cannot be used as outputs.
+
+    endmenu
+
+    menu "Host Interface"
+        menu "4Bit Strobe Input"
+
+            config HOST_KDB0
+                int "KDB0 GPIO pin number"
+                range 0 46
+                default 23 
+                help
+                    GPIO number (IOxx) used to connect the 4bit bidirectional data bus Bit 0 with the ESP32. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDB1
+                int "KDB1 GPIO pin number"
+                range 0 46
+                default 25 
+                help
+                    GPIO number (IOxx) used to connect the 4bit bidirectional data bus Bit 1 with the ESP32. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDB2
+                int "KDB2 GPIO pin number"
+                range 0 46
+                default 26 
+                help
+                    GPIO number (IOxx) used to connect the 4bit bidirectional data bus Bit 2 with the ESP32. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDB3
+                int "KDB3 GPIO pin number"
+                range 0 46
+                default 27 
+                help
+                    GPIO number (IOxx) used to connect the 4bit bidirectional data bus Bit 3 with the ESP32. See schematic for actual used value. May change with revisions.
+        endmenu
+
+        menu "8Bit Scan Data Output"
+            config HOST_KDO0
+                int "KDO0 GPIO pin number"
+                range 0 46
+                default 14 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 0 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO1
+                int "KDO1 GPIO pin number"
+                range 0 46
+                default 15 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 1 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO2
+                int "KDO2 GPIO pin number"
+                range 0 46
+                default 16 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 2 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO3
+                int "KDO3 GPIO pin number"
+                range 0 46
+                default 17 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 3 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO4
+                int "KDO4 GPIO pin number"
+                range 0 46
+                default 18 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 4 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO5
+                int "KDO5 GPIO pin number"
+                range 0 46
+                default 19 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 5 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO6
+                int "KDO6 GPIO pin number"
+                range 0 46
+                default 21 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 6 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+
+            config HOST_KDO7
+                int "KDO7 GPIO pin number"
+                range 0 46
+                default 21 
+                help
+                    GPIO number (IOxx) used to connect the 8bit scan data output Bit 7 to the 74HCT257 IC. See schematic for actual used value. May change with revisions.
+        endmenu
+
+        choice MOUSE_UART_CHOICE
+            prompt "Mouse host side UART"
+            default HOST_BITBANG_UART
+            help
+                Select the hardware method of sending mouse data to the host. The two possible methods are bitbang (software UART) and UART Hardware.
+            config HOST_BITBANG_UART
+                bool "Bitbang UART"
+                help
+                    Use the Bitbang UART (software).
+            config HOST_HW_UART
+                bool "Hardware UART"
+                help
+                    Use one of the ESP32 Hardware UART's.
+        endchoice
+
+        config HOST_RTSNI
+            int "RTSNi GPIO pin number"
+            range 0 46
+            default 35 
+            help
+                GPIO number (IOxx) used to connect the RTSN line with the ESP32. See schematic for actual used value. May change with revisions.
+
+        config HOST_MPXI
+            int "MPXi GPIO pin number"
+            range 0 46
+            default 12 
+            help
+                GPIO number (IOxx) used to connect the MPX line with the ESP32. See schematic for actual used value. May change with revisions.
+
+        config HOST_KDI4
+            int "KDI4 GPIO pin number"
+            range 0 46
+            default 13 
+            help
+                GPIO number (IOxx) used to connect the KDI4 line with the ESP32. See schematic for actual used value. May change with revisions.
+
+    endmenu
+
+    menu "WiFi"
+
+        config IF_WIFI_ENABLED
+            bool "Enable WiFi connectivity"
+            default false
+            help
+                Allow interface to act as an Access Point to allow external connectivity. Once connected the WiFi is intended to be used for making
+                key mapping changes.
+                This is an experimental feature and under development.
+
+        config IF_WIFI_EN_KEY
+            int "WiFi Enable GPIO pin number"
+            range 0 46
+            default 34 
+            depends on IF_WIFI_ENABLED
+            help
+                GPIO number (IOxx) used by the WiFi En switch to enable wifi connectivity.
+
+        config IF_WIFI_SSID
+            string "Default SSID in Access Point Mode"
+            default "sharpkey" 
+            depends on IF_WIFI_ENABLED
+            help
+                The SSID broadcast whilst the sharpkey module advertises wireless connectivity.
+
+        config IF_WIFI_DEFAULT_SSID_PWD
+            string "Default password for initial connection to Access Point Mode"
+            default "sharpkey" 
+            depends on IF_WIFI_ENABLED
+            help
+                The initial password needed to connect and logon to access point.
+
+        config IF_WIFI_MAX_RETRIES
+            int "Maximum number of connection retries."
+            range 0 100
+            default 10 
+            depends on IF_WIFI_ENABLED
+            help
+                Number of retries allowed for making a wireless connection with a client.
+
+        config IF_WIFI_AP_CHANNEL
+            int "Channel of the Access Point."
+            range 0 13
+            default 7 
+            depends on IF_WIFI_ENABLED
+            help
+                Channel use by the Access Point, default is 7.
+                
+        config IF_WIFI_SSID_HIDDEN
+            int "Broadcast SSID?"
+            range 0 1
+            default 0 
+            depends on IF_WIFI_ENABLED
+            help
+                Broadcast the SSID (0) or hide it (1).
+
+        config IF_WIFI_MAX_CONNECTIONS
+            int "Maximum simultaneous connections."
+            range 0 20
+            default 5 
+            depends on IF_WIFI_ENABLED
+            help
+                Maximum number of simultaneous open connections supported.
+    
+    endmenu
+
+    menu "Debug Options"
+
+        config DEBUG_SERIAL
+            bool "Serial debug output"
+            default false
+            help
+                Enable debug output (non ESP logging) on the serial port.
+
+        config DEBUG_DISABLE_KDB
+            bool "Disable input mode actuation of the KDB data bus"
+            default false
+            help
+                Disable the Host KDB input configuration step, useful feature for debugging.
+
+        config DEBUG_DISABLE_KDO
+            bool "Disable output mode actuation of the KDO strobe row"
+            default false
+            help
+                Disable the Host KDO output configuration step, useful feature for debugging.
+
+        config DEBUG_DISABLE_RTSNI
+            bool "Disable input mode actuation of the RTSNi signal"
+            default false
+            help
+                Disable the Host RTSNi input configuration step, useful feature for debugging.
+
+        config DEBUG_DISABLE_MPXI
+            bool "Disable input mode actuation of the MPXi signal"
+            default false
+            help
+                Disable the Host MPXi input configuration step, useful feature for debugging.
+
+        config DEBUG_DISABLE_KDI
+            bool "Disable input mode actuation of the KDI4 signal"
+            default false
+            help
+                Disable the Host KDI input configuration step, useful feature for debugging.
+    endmenu
+
+    config PWRLED
+        int "GPIO pin number used for Power On and Status LED"
+        range 0 46
+        default 25 
+        help
+            GPIO number (IOxx) used to control the Power On/Status LED.
+            Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+            GPIOs 35-39 are input-only so cannot be used as outputs.
+
+endmenu
+
