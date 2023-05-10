@@ -577,7 +577,7 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
             // Count the number of pulses on the TxD line (X68000) or Mouse Ctrl line. If there are pulses then the host is a mouse port.
             uint32_t cntCtrl= 0;
             gpioIN = gpioINLast = REG_READ(GPIO_IN_REG);
-            for(uint32_t idx=0; idx < 400000; idx++)
+            for(uint32_t idx=0; idx < 2000000; idx++)
             {
                 gpioIN = REG_READ(GPIO_IN_REG);
                 if((gpioIN & KDB0_MASK) && (gpioIN & KDB0_MASK) != (gpioINLast & KDB0_MASK))  cntCtrl++;
@@ -591,20 +591,23 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
 
             // Check for X68000 - KD4 = low, MPX = low, RTSN = high
             gpioIN = REG_READ(GPIO_IN_REG);
+            //ESP_LOGW(MAINTAG, "INREG(%x) MPXI(%x) RTSNI(%x) KD4(%x) and cntCtrl(%d).", gpioIN, (gpioIN & (1 << CONFIG_HOST_MPXI)), (REG_READ(GPIO_IN1_REG) & RTSNI_MASK), (gpioIN & (1 << CONFIG_HOST_KDI4)), cntCtrl);
             if(cntCtrl <= 1 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
                eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableX68000 == true))
             {
                 ifMode = 68000;
             }
-            else
+            // Check for Mouse - KD4 = high, MPX = low, RTSN = high
+            else if(cntCtrl > 0 && (gpioIN & (1 << CONFIG_HOST_KDI4)) != 0 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
+               eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
             {
-                // Check for Mouse - KD4 = high, MPX = low, RTSN = high
-                gpioIN = REG_READ(GPIO_IN_REG);
-                if(cntCtrl > 1 && (gpioIN & (1 << CONFIG_HOST_KDI4)) != 0 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
-                   eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
-                {
-                    ifMode = 2;
-                }
+                ifMode = 2;
+            }
+            // Check for PC-9801 - KD4 = low, MPX = low, RTSN = high
+            else if((gpioIN & (1 << CONFIG_HOST_KDI4)) == 0 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
+                    eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
+            {
+                ifMode = 9801;
             }
         }
     }
@@ -620,7 +623,7 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
   #ifdef CONFIG_MZ25KEY_MZ2800
     uint32_t ifMode = 2800;
   #endif
-ifMode = 9801; 
+
     // Return a value which represents the detected host type.
     return(ifMode);
 }
