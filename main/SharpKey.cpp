@@ -50,6 +50,7 @@
 //                             immediately starts up in WiFi mode without enabling BT or hardware I/F.
 //                             This is necessary due to shared antenna in the ESP32 and also clashes
 //                             in the IDF library stack.
+//            v1.05 May 2023 - Fine tune the PC-9801/X68000 detection algorithm.
 //
 // Notes:           See Makefile to enable/disable conditional components
 //
@@ -493,6 +494,13 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
   //uint32_t                 KDB1_MASK  = (1 << CONFIG_HOST_KDB1);
   //uint32_t                 KDB2_MASK  = (1 << CONFIG_HOST_KDB2);
   //uint32_t                 KDB3_MASK  = (1 << CONFIG_HOST_KDB3);
+    uint8_t                  tMPXI;
+    uint8_t                  tRTSNI;
+    uint8_t                  tKDB0;
+    uint8_t                  tKDB1;
+    uint8_t                  tKDB2;
+    uint8_t                  tKDB3;
+    uint8_t                  tKDI4;
 
   // Build selectable target. This software can be built to run on the SharpKey or mz25key interfaces. If a resistor is connected from MPX input to the ESP32 IO12 pin 14 then
   // the SharpKey build can be used even though the mz25key only supports one target at a time. If no resistor is connected then you will need to build for a specific target
@@ -558,7 +566,14 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
         vTaskDelay(1);
         // Now read back KDB.
         gpioIN = REG_READ(GPIO_IN_REG);
-        if((gpioIN & (1 << CONFIG_HOST_KDB3)) && (gpioIN & (1 << CONFIG_HOST_KDB2)) == 0 && (gpioIN & (1 << CONFIG_HOST_KDB1)) && (gpioIN & (1 << CONFIG_HOST_KDB0)) == 0 && 
+        tMPXI  = (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 ? 0 : 1;
+        tRTSNI = (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) == 0 ? 0 : 1;
+        tKDB0  = (gpioIN & (1 << CONFIG_HOST_KDB0)) == 0 ? 0 : 1;
+        tKDB1  = (gpioIN & (1 << CONFIG_HOST_KDB1)) == 0 ? 0 : 1;
+        tKDB2  = (gpioIN & (1 << CONFIG_HOST_KDB2)) == 0 ? 0 : 1;
+        tKDB3  = (gpioIN & (1 << CONFIG_HOST_KDB3)) == 0 ? 0 : 1;
+        tKDI4  = (gpioIN & (1 << CONFIG_HOST_KDI4)) == 0 ? 0 : 1;
+        if(tKDB3 == 1  && tKDB2 == 0 && tKDB1 == 1 && tKDB0 == 0 && 
            eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableX1 == true))
         {
             ifMode = 1;
@@ -589,25 +604,36 @@ uint32_t getHostType(bool eFuseInvalid, t_EFUSE sharpkeyEfuses)
             io_conf.pull_up_en   = GPIO_PULLUP_DISABLE;
             gpio_config(&io_conf);
 
-            // Check for X68000 - KD4 = low, MPX = low, RTSN = high
+            // Reload the signal state as the pulse check may have affected them.
             gpioIN = REG_READ(GPIO_IN_REG);
-            //ESP_LOGW(MAINTAG, "INREG(%x) MPXI(%x) RTSNI(%x) KD4(%x) and cntCtrl(%d).", gpioIN, (gpioIN & (1 << CONFIG_HOST_MPXI)), (REG_READ(GPIO_IN1_REG) & RTSNI_MASK), (gpioIN & (1 << CONFIG_HOST_KDI4)), cntCtrl);
-            if(cntCtrl <= 1 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
+            tMPXI  = (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 ? 0 : 1;
+            tRTSNI = (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) == 0 ? 0 : 1;
+            tKDB0  = (gpioIN & (1 << CONFIG_HOST_KDB0)) == 0 ? 0 : 1;
+            tKDB1  = (gpioIN & (1 << CONFIG_HOST_KDB1)) == 0 ? 0 : 1;
+            tKDB2  = (gpioIN & (1 << CONFIG_HOST_KDB2)) == 0 ? 0 : 1;
+            tKDB3  = (gpioIN & (1 << CONFIG_HOST_KDB3)) == 0 ? 0 : 1;
+            tKDI4  = (gpioIN & (1 << CONFIG_HOST_KDI4)) == 0 ? 0 : 1;
+
+            //ESP_LOGW(MAINTAG, "INREG(%x) MPXI(%x) RTSNI(%x) KDB0(%x) KDB1(%x) KDB2(%x) KDB3(%x) KDI4(%x) and cntCtrl(%d).", 
+            //                   gpioIN, tMPXI, tRTSNI, tKDB0, tKDB1, tKDB2, tKDB3, tKDI4, cntCtrl);
+
+            // Check for PC-9801 - KD4 = low, MPX = low, RTSN = high
+            if(tKDI4 == 0 && tMPXI == 0 && tRTSNI == 1 && tKDB0 == 1 && tKDB3 == 1 &&
+                    eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
+            {
+                ifMode = 9801;
+            }
+            // Check for X68000 - KD4 = low, MPX = low, RTSN = high
+            else if(cntCtrl <= 1 && tMPXI == 0 && tRTSNI == 1 && 
                eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableX68000 == true))
             {
                 ifMode = 68000;
             }
             // Check for Mouse - KD4 = high, MPX = low, RTSN = high
-            else if(cntCtrl > 0 && (gpioIN & (1 << CONFIG_HOST_KDI4)) != 0 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
+            else if(cntCtrl > 0 && tKDI4 == 1 && tMPXI == 0 && tRTSNI == 1 && 
                eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
             {
                 ifMode = 2;
-            }
-            // Check for PC-9801 - KD4 = low, MPX = low, RTSN = high
-            else if((gpioIN & (1 << CONFIG_HOST_KDI4)) == 0 && (gpioIN & (1 << CONFIG_HOST_MPXI)) == 0 && (REG_READ(GPIO_IN1_REG) & RTSNI_MASK) != 0 && 
-                    eFuseInvalid == false && (sharpkeyEfuses.disableRestrictions == true || sharpkeyEfuses.enableMouse == true))
-            {
-                ifMode = 9801;
             }
         }
     }
